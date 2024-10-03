@@ -1,4 +1,5 @@
-const sequelize = require('../../database.js');
+import sequelize from '../../database.js';
+
 
 const checkDatabaseConnection = async () => {
   try {
@@ -9,6 +10,4 @@ const checkDatabaseConnection = async () => {
   }
 };
 
-module.exports = {
-  checkDatabaseConnection,
-};
+export default checkDatabaseConnection;

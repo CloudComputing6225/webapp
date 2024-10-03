@@ -1,6 +1,9 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
 
-const { Sequelize } = require('sequelize');
+dotenv.config();
+
+
+import { Sequelize } from 'sequelize';
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -12,7 +15,7 @@ const sequelize = new Sequelize(
   }
 );
 
-module.exports = sequelize;
+export default sequelize;
 
 // sequelize.authenticate().then(() => {
 //     console.log("CS");

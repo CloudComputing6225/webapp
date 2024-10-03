@@ -21,6 +21,43 @@ Database connection failure(503 Service Unavailable): `curl -vvvv http://localho
 
 Method not allowed(405 Method Not Allowed):` curl -vvvv -XPUT http://localhost:8080/healthz`
 
+
+# Assignment2
+
+# Features
+
+User Registration: Create a new user with email, password, first name, and last name.
+
+User Authentication: Authenticate a user using HTTP Basic Authentication.
+
+User Information: Retrieve and update user information. Restrictions are placed to prevent email updates and modifying other sensitive fields.
+
+Health Check Endpoint: Check the health of the application (e.g., database connection).
+
+Input Validation: Proper error handling when unexpected fields are provided.
+
+# API Endpoints
+
+POST /v1/user: Create a new user.
+
+GET /v1/user/self: Get authenticated user's information.
+
+PUT /v1/user/self: Update authenticated user's information.
+
+GET /healthz: Health check for the application
+
+
+# Deploying the Project to a DigitalOcean Droplet
+
+Create a new Ubuntu 20.04 droplet.
+
+Once created, access the droplet using SSH:`ssh root@your_droplet_ip`
+
+Update your package index and install the packages.
+
+
+
+
 # Author
 
 Saurabh Srivastava

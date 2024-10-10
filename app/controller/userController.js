@@ -39,44 +39,7 @@ const hashPassword = async (password) => {
   return hashedPassword;
 };
 
-// Creating a new user
-const createUser = async (req, res) => {
-  
-  const { email, password, first_name, last_name, account_created, account_updated, ...rest  } = req.body;
 
-  if (account_created || account_updated || Object.keys(rest).length !== 0) {
-    return res.status(400).send();
-  }
-
-  // Check if all fields are provided
-  if (!email || !password || !first_name || !last_name) {
-    return res.status(400).send();
-  }
-
-  // Check if the email already exists
-  const existingUser = await User.findOne({ where: { email } });
-  if (existingUser) {
-    return res.status(400).send();
-  }
-
-  try {
-    // Hash password before storing
-    const hashedPassword = await hashPassword(password);
-    const newUser = await User.create({
-      email,
-      password: hashedPassword,
-      first_name,
-      last_name,
-      account_created: new Date(),
-      account_updated: new Date()
-    });
-    // Exclude password from response
-    const { password: _, ...userWithoutPassword } = newUser.toJSON();
-    return res.status(201).send(userWithoutPassword);
-  } catch (error) {
-    return res.status(400).send();
-  }
-};
 
 // Authentication middleware
 const authenticateUser = async (req, res, next) => {

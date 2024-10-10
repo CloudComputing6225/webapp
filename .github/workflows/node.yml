@@ -60,4 +60,4 @@ jobs:
           mysql -h 127.0.0.1 -u root -proot -e "FLUSH PRIVILEGES;"
 
       - name: Run Tests
-        run: npm test -- --detectOpenHandles
+        run: npm test -- --detectOpenHandles --verbose --forceExit

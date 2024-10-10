@@ -1,4 +1,4 @@
-name: CI Tests
+name: node
 
 on:
   push:
@@ -60,4 +60,4 @@ jobs:
           mysql -h 127.0.0.1 -u root -proot -e "FLUSH PRIVILEGES;"
 
       - name: Run Tests
-        run: npm test
+        run: npm test -- --detectOpenHandles

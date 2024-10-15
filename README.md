@@ -60,7 +60,7 @@ Update your package index and install the packages.
 
 # Author
 
-Saurabh Srivastava
+Name: Saurabh Srivastava
 
 email: srivastava.sau@northeastern.edu
 

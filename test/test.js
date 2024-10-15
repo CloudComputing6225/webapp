@@ -4,7 +4,7 @@ import User from '../app/model/index.js';
 
 describe('User API Test Cases', () => {
 
-  let createdUserEmail = 'ssa@gmail.com';
+  let createdUserEmail = 'ssa';
   let createdUserPassword = '123';
 
   // Clean up database before running tests

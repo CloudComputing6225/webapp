@@ -1,33 +1,37 @@
-name: Validating Packer AMI template
+name: Packer Status Check
+
 on:
-  workflow_dispatch:
   pull_request:
-    branches: ["main"]
+    branches: [main]
 
 jobs:
-  packer_validate:
+  packer-check:
     runs-on: ubuntu-latest
-    environment: production
-    name: Validating Packer - AMI Build
     steps:
-      - name: Step 1 - Checkout code from branch
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Step 2 - Zip webapp
-        run: |
-          zip -r webapp.zip ./
-          ls
-
-      - name: Step 3 - Setup `packer`
+      - name: Setup Packer
         uses: hashicorp/setup-packer@main
-        id: setup
         with:
-          version: "1.8.3" # or `latest`
+          version: "1.10.0"
 
-      - name: Step 4 - Run `packer init`
-        id: init
-        run: "packer init ./aws.pkr.hcl"
+      - name: Run Packer init
+        run: packer init aws.pkr.hcl
 
-      - name: Step 5 - Run `packer validate`
-        id: validate
-        run: "packer validate --var-file=aws.pkrvars.hcl ./aws.pkr.hcl"
+      - name: Packer fmt check
+        run: |
+          packer fmt -check aws.pkr.hcl
+          if [ $? -ne 0 ]; then
+            echo "Packer template is not properly formatted. Please run 'packer fmt' locally and commit the changes."
+            exit 1
+          fi
+
+      - name: Packer validate
+        run: |
+
+          packer validate -var "artifact_path=" aws.pkr.hcl
+          if [ $? -ne 0 ]; then
+            echo "Packer template validation failed. Please check the template for errors."
+            exit 1
+          fi

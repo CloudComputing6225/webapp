@@ -1,104 +1,86 @@
-name: Building Packer AMI
+name: Packer Build
+
 on:
-  workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  #First Job for checking out the webapp code and testing it
-  node_build:
+  packer-build:
+    name: Packer Build
     runs-on: ubuntu-latest
     environment: production
-    name: Installing & Testing the webapp (node application)
+
+    env:
+      AWS_REGION: us-east-1
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_DATABASE: ${{ secrets.DB_NAME }}
+      PORT: ${{ secrets.PORT }}
+
+    strategy:
+      matrix:
+        node-version: [21.x]
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 18
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - run: npm i
-      - run: npm test
-
-  #Second job for running packer build
-  packer_build_ami:
-    needs: node_build
-    runs-on: ubuntu-latest
-    name: Building Packer - AMI
-    outputs:
-      ami_id: ${{ steps.updating.outputs.ami }}
-    steps:
-      - name: Step 1 - Checkout code from branch
-        uses: actions/checkout@v2
-
-      - name: Step 2 - Zip webapp
-        run: |
-          zip -r webapp.zip ./
-          ls
-
-      - name: Step 3 - Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Step 4 - Setup `packer`
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          # cache: 'npm'
+
+      - name: Setup MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Integration Tests
+        run: npm test -- --detectOpenHandles --verbose --forceExit
+
+      - name: Drop DB
+        if: always()
+        run: mysql -h ${{secrets.DB_HOST}} -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} -e "DROP DATABASE IF EXISTS ${{ secrets.DB_DATABASE }};"
+
+      - name: Setup MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+
+      - name: Build application artifact
+        run: |
+          npm run build
+          # mkdir -p artifact
+          # cp -r dist/* artifact/
+          # cp package.json artifact/
+          # cp package-lock.json artifact/
+          # zip -r webapp-artifact.zip artifact/
+
+      - name: Setup Packer
         uses: hashicorp/setup-packer@main
-        id: setup
         with:
-          version: "1.8.3" # or `latest`
+          version: "1.10.0"
 
-      - name: Step 5 - Run `packer init`
-        id: init
-        run: "packer init ./aws.pkr.hcl"
+      - name: Set script permissions
+        run: chmod +x packer/scripts/*.sh
 
-      - name: Step 6 - Run `packer validate`
-        id: validate
-        run: "packer validate --var-file=aws.pkrvars.hcl ./aws.pkr.hcl"
-
-      - name: Step 7 - Run `packer build`
-        id: build
-        run: "packer build --var-file=aws.pkrvars.hcl ./aws.pkr.hcl"
-
-      - name: Step 8 - Run `Updating Launch Template with latest AMI id`
-        id: updating
+      - name: Build custom AMI
         run: |
-          echo "Deploying Packer Build"
-          AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
-          echo "$AMI_ID"
-          echo "ami=$AMI_ID" >> "$GITHUB_OUTPUT"
-
-  #Third job for running packer build
-  autoscaling_refresh:
-    needs: packer_build_ami
-    runs-on: ubuntu-latest
-    name: Auto scaling group launch template & instance refresh
-
-    steps:
-      - name: Step 1 - Configure AWS Credentials for Dev
-        if: ${{ vars.DEPLOY_ENVIRONMENT == 'dev' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Step 1 - Configure AWS Credentials for Prod
-        if: ${{ vars.DEPLOY_ENVIRONMENT == 'prod' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Step 2 - Run `Configuring the launch template`
-        id: configuring
-        run: |
-          aws --version
-          aws ec2 describe-launch-templates
-          aws ec2 create-launch-template-version --launch-template-data '{"ImageId":"${{needs.packer_build_ami.outputs.ami_id}}"}' --source-version 1 --launch-template-id ${{ vars.LAUNCH_TEMPLATE_ID }}  --no-cli-pager
-
-      - name: Step 3 - Run `Instance Refresh with latest AMI id`
-        id: refreshing
-        run: "aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }}"
+          packer init .
+          packer build -debug \
+            -var "aws_region=${{ env.AWS_REGION }}" \
+            -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
+            aws.pkr.hcl

@@ -43,7 +43,7 @@ jobs:
       - name: Setup MySQL
         run: |
           sudo /etc/init.d/mysql start
-          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASSWORD}} -e "CREATE DATABASE ${{ secrets.DB_NAME}};"
+          mysql -h ${{ secrets.DB_HOST }} -u${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} -e "CREATE DATABASE ${{ secrets.DB_NAME }};"
 
       - name: Install Dependencies
         run: npm ci

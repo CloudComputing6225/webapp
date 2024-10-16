@@ -14,9 +14,9 @@ jobs:
     env:
       AWS_REGION: us-east-1
       DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASSWORD }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_HOST: ${{ secrets.DB_HOST }}
-      DB_DATABASE: ${{ secrets.DB_NAME }}
+      DB_NAME: ${{ secrets.DB_NAME }}
       PORT: ${{ secrets.PORT }}
 
     strategy:
@@ -43,7 +43,7 @@ jobs:
       - name: Setup MySQL
         run: |
           sudo /etc/init.d/mysql start
-          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASSWORD}} -e "CREATE DATABASE ${{ secrets.DB_NAME}};"
 
       - name: Install Dependencies
         run: npm ci
@@ -53,12 +53,12 @@ jobs:
 
       - name: Drop DB
         if: always()
-        run: mysql -h ${{secrets.DB_HOST}} -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} -e "DROP DATABASE IF EXISTS ${{ secrets.DB_DATABASE }};"
+        run: mysql -h ${{secrets.DB_HOST}} -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} -e "DROP DATABASE IF EXISTS ${{ secrets.DB_NAME }};"
 
       - name: Setup MySQL
         run: |
           sudo /etc/init.d/mysql start
-          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASSWORD}} -e "CREATE DATABASE ${{ secrets.DB_NAME}};"
 
       - name: Build application artifact
         run: |

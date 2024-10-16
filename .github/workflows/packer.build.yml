@@ -77,7 +77,7 @@ jobs:
           version: "1.10.0"
 
       - name: Set script permissions
-        run: chmod +x packer/scripts/*.sh
+        run: chmod +x scripts/*.sh
 
       - name: Build custom AMI
         run: |

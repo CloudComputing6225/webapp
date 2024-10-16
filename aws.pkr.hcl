@@ -49,7 +49,7 @@ variable "demo_account_id" {
 
 variable "artifact_path" {
   type    = string
-  default = "../webapp-artifact.zip"
+  default = "./webapp-artifact.zip"
 }
 
 source "amazon-ebs" "ubuntu" {

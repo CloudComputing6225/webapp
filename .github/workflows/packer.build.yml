@@ -1,0 +1,86 @@
+name: Packer Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  packer-build:
+    name: Packer Build
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      AWS_REGION: us-east-1
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_DATABASE: ${{ secrets.DB_NAME }}
+      PORT: ${{ secrets.PORT }}
+
+    strategy:
+      matrix:
+        node-version: [21.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          # cache: 'npm'
+
+      - name: Setup MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Integration Tests
+        run: npm test -- --detectOpenHandles --verbose --forceExit
+
+      - name: Drop DB
+        if: always()
+        run: mysql -h ${{secrets.DB_HOST}} -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} -e "DROP DATABASE IF EXISTS ${{ secrets.DB_DATABASE }};"
+
+      - name: Setup MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -h ${{secrets.DB_HOST}} -u${{secrets.DB_USER}} -p${{secrets.DB_PASS}} -e "CREATE DATABASE ${{ secrets.DB_DATABASE }};"
+
+      - name: Build application artifact
+        run: |
+          npm run build
+          # mkdir -p artifact
+          # cp -r dist/* artifact/
+          # cp package.json artifact/
+          # cp package-lock.json artifact/
+          # zip -r webapp-artifact.zip artifact/
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "1.10.0"
+
+      - name: Set script permissions
+        run: chmod +x packer/scripts/*.sh
+
+      - name: Build custom AMI
+        run: |
+          packer init .
+          packer build -debug \
+            -var "aws_region=${{ env.AWS_REGION }}" \
+            -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
+            aws.pkr.hcl

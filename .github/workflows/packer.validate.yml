@@ -1,0 +1,37 @@
+name: Packer Status Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  packer-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "1.10.0"
+
+      - name: Run Packer init
+        run: packer init aws.pkr.hcl
+
+      - name: Packer fmt check
+        run: |
+          packer fmt -check aws.pkr.hcl
+          if [ $? -ne 0 ]; then
+            echo "Packer template is not properly formatted. Please run 'packer fmt' locally and commit the changes."
+            exit 1
+          fi
+
+      - name: Packer validate
+        run: |
+
+          packer validate -var "artifact_path=" aws.pkr.hcl
+          if [ $? -ne 0 ]; then
+            echo "Packer template validation failed. Please check the template for errors."
+            exit 1
+          fi

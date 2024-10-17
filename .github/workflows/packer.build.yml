@@ -34,6 +34,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Create /opt/app directory
+        run: sudo mkdir -p /opt/app
+
       - name: Create .env file
         run: |
           echo "DB_HOST=127.0.0.1" >> .env
@@ -42,6 +45,7 @@ jobs:
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
           echo "PORT=8080" >> .env
+          sudo mv .env /opt/app/.env
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -59,12 +63,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Prepare Build and Artifact
+      #   - name: Run Integration Tests
+      #     run: npm test -- --detectOpenHandles --verbose --forceExit
+
+      - name: Build application artifact
         run: |
-          # Ensure the .env file is in the root directory
-          # Build and create the artifact zip
           npm run build
-          zip -r webapp-artifact.zip . -x "node_modules/*" "*.git/*"
+          # mkdir -p artifact
+          # cp -r dist/* artifact/
+          # cp package.json artifact/
+          # cp package-lock.json artifact/
+          # zip -r webapp-artifact.zip artifact/
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -75,18 +84,9 @@ jobs:
         run: chmod +x scripts/*.sh
 
       - name: Build custom AMI
-        env:
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          PORT: ${{ secrets.PORT }}
         run: |
           packer init .
           packer build -debug \
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
-            -var "DB_USER=${{ secrets.DB_USER }}" \
-            -var "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            -var "DB_NAME=${{ secrets.DB_NAME }}" \
-            -var "PORT=${{ secrets.PORT }}" \
             aws.pkr.hcl

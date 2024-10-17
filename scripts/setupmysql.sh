@@ -1,24 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "Installing MySQL..."
-sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
+# Load environment variables from .env file
+export $(grep -v '^#' /opt/app/.env | xargs)
 
-echo "Starting MySQL service..."
+# Enable and start MySQL service
 sudo systemctl enable mysql
 sudo systemctl start mysql
 
-# Check if variables are set
-if [[ -z "${DB_NAME}" || -z "${DB_USER}" || -z "${DB_PASSWORD}" ]]; then
-  echo "Error: Database environment variables (DB_NAME, DB_USER, DB_PASSWORD) must be set."
-  exit 1
-fi
+# Set up MySQL database and user using values from .env
+echo "Setting up MySQL database and user..."
 
-echo "Configuring MySQL..."
-sudo mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
-sudo mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'%';"
+sudo mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;"
+sudo mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'$DB_HOST' IDENTIFIED BY '$DB_PASSWORD';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'$DB_HOST';"
 sudo mysql -e "FLUSH PRIVILEGES;"
 
-echo "MySQL setup completed."
+echo "MySQL database setup completed successfully."

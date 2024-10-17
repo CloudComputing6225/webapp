@@ -34,6 +34,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Create /opt/app directory
+        run: sudo mkdir -p /opt/app
+
       - name: Create .env file
         run: |
           echo "DB_HOST=127.0.0.1" >> .env

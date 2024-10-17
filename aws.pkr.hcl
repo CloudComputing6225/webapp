@@ -126,10 +126,6 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/createuser.sh"
-  }
-
-  provisioner "shell" {
     script = "scripts/create-env.sh"
   }
 

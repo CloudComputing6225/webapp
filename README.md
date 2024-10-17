@@ -56,6 +56,38 @@ Once created, access the droplet using SSH:`ssh root@your_droplet_ip`
 Update your package index and install the packages.
 
 
+# Assignment4
+
+# Overview
+
+Overview
+This project automates the creation of a custom Amazon Machine Image (AMI) using HashiCorp Packer. The custom AMI includes:
+
+A Node.js web application.
+
+MySQL server setup.
+
+Pre-configured environment variables for database connection using a .env file.
+
+A systemd service to start the Node.js app automatically when the instance launches.
+
+# Prerequisites
+Before you begin, ensure you have the following installed:
+
+HashiCorp Packer
+AWS CLI
+A valid AWS account with access to create AMIs.
+GitHub repository with secret values for database credentials and AWS credentials (for GitHub Actions).
+Secrets Configuration
+Make sure the following secrets are set in your GitHub repository:
+
+AWS_ACCESS_KEY_ID - Your AWS access key.
+AWS_SECRET_ACCESS_KEY - Your AWS secret access key.
+DB_USER - Database user.
+DB_PASSWORD - Database password.
+DB_NAME - Name of the database.
+DB_HOST - Host for the database.
+PORT - The port your web application will run on.
 
 
 # Author

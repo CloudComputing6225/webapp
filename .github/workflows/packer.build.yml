@@ -89,4 +89,5 @@ jobs:
           packer build -debug \
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
+            -var "env_file=.env" \
             aws.pkr.hcl

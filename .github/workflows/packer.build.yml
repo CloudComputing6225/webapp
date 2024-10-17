@@ -62,7 +62,6 @@ jobs:
       - name: Prepare Build and Artifact
         run: |
           # Ensure the .env file is in the root directory
-          cp .env ./.env
           # Build and create the artifact zip
           npm run build
           zip -r webapp-artifact.zip . -x "node_modules/*" "*.git/*"

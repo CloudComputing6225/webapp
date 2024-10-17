@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon app.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "build": "zip -r webapp-artifact.zip . -x \\*node_modules\\* \\*.git\\* \\*.env\\*"
+    "build": "zip -r webapp-artifact.zip . -x \\*node_modules\\* \\*.git\\*"
   },
   "author": "",
   "license": "ISC",

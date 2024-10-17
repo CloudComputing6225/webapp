@@ -130,10 +130,6 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/create-env.sh"
-  }
-
-  provisioner "shell" {
     script = "scripts/setupapp.sh"
   }
 

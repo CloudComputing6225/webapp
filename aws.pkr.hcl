@@ -52,19 +52,19 @@ variable "artifact_path" {
   default = "./webapp-artifact.zip"
 }
 
+variable "DB_NAME" {
+  type    = string
+  default = env("DB_NAME")
+}
+
 variable "DB_USER" {
   type    = string
-  default = ""
+  default = env("DB_USER")
 }
 
 variable "DB_PASSWORD" {
   type    = string
-  default = ""
-}
-
-variable "DB_NAME" {
-  type    = string
-  default = "webapp"
+  default = env("DB_PASSWORD")
 }
 
 variable "PORT" {
@@ -118,9 +118,9 @@ build {
 
   provisioner "shell" {
     environment_vars = [
-      "DB_NAME=${env("DB_NAME")}",
-      "DB_USER=${env("DB_USER")}",
-      "DB_PASSWORD=${env("DB_PASSWORD")}"
+      "DB_NAME=${var.DB_NAME}",
+      "DB_USER=${var.DB_USER}",
+      "DB_PASSWORD=${var.DB_PASSWORD}"
     ]
     script = "scripts/setupmysql.sh"
   }

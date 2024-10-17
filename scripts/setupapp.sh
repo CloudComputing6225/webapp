@@ -2,7 +2,7 @@
 set -e
 
 # Create /opt/app directory if it doesn't exist
-
+sudo mkdir -p /opt/app
 
 # Navigate to the application directory
 cd /opt/app

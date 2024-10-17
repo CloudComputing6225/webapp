@@ -97,6 +97,11 @@ build {
   }
 
   provisioner "shell" {
+    environment_vars = [
+      "DB_NAME={{user `DB_NAME`}}",
+      "DB_USER={{user `DB_USER`}}",
+      "DB_PASSWORD={{user `DB_PASSWORD`}}"
+    ]
     script = "scripts/setupmysql.sh"
   }
 

@@ -59,23 +59,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      #   - name: Run Integration Tests
-      #     run: npm test -- --detectOpenHandles --verbose --forceExit
-
-      - name: Build application artifact
+      - name: Prepare Build and Artifact
         run: |
-          touch .env
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "PORT=${{ secrets.PORT }}" >> .env
+          # Ensure the .env file is in the root directory
+          cp .env ./.env
+          # Build and create the artifact zip
           npm run build
-          # mkdir -p artifact
-          # cp -r dist/* artifact/
-          # cp package.json artifact/
-          # cp package-lock.json artifact/
-          # zip -r webapp-artifact.zip artifact/
+          zip -r webapp-artifact.zip . -x "node_modules/*" "*.git/*"
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -96,4 +86,8 @@ jobs:
           packer build -debug \
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
+            -var "DB_USER=${{ secrets.DB_USER }}" \
+            -var "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+            -var "DB_NAME=${{ secrets.DB_NAME }}" \
+            -var "PORT=${{ secrets.PORT }}" \
             aws.pkr.hcl

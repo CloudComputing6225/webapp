@@ -34,8 +34,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      #   - name: Create /opt/app directory
-      #     run: sudo mkdir -p /opt/app
+      - name: Create /opt/app directory
+        run: sudo mkdir -p /opt/app
+
       - name: Create .env file
         run: |
           echo "DB_HOST=127.0.0.1" >> .env
@@ -44,7 +45,7 @@ jobs:
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
           echo "PORT=8080" >> .env
-        #   sudo mv .env /opt/app/.env
+          sudo mv .env /opt/app/.env
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -88,5 +89,4 @@ jobs:
           packer build -debug \
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
-            -var "env_file=.env" \
             aws.pkr.hcl

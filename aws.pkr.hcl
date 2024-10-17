@@ -51,10 +51,6 @@ variable "artifact_path" {
   type    = string
   default = "./webapp-artifact.zip"
 }
-variable "env_file" {
-  type    = string
-  default = ".env"
-}
 
 source "amazon-ebs" "ubuntu" {
   ami_name      = "${var.app_name}-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
@@ -80,20 +76,6 @@ source "amazon-ebs" "ubuntu" {
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
-
-  provisioner "file" {
-    source      = var.env_file
-    destination = "/tmp/.env"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "sudo mkdir -p /opt/app/",
-      "sudo mv /tmp/.env /opt/app/.env",
-      "sudo chown -R ubuntu:ubuntu /opt/app",
-      "sudo chmod -R 755 /opt/app",
-    ]
-  }
 
   provisioner "shell" {
     inline = [

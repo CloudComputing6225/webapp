@@ -68,6 +68,7 @@ jobs:
 
       - name: Build application artifact
         run: |
+          mkdir -p dist
           cp .env dist/.env
           npm run build
           zip -r webapp-artifact.zip dist -x "node_modules/*" "*.git/*"

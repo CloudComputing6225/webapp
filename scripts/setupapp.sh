@@ -22,6 +22,15 @@ sudo rm -rf packer
 
 echo "Setting correct ownership..."
 sudo chown -R csye6225:csye6225 .
+sudo chmod -R 755 /opt/app
+# Ensure the .env file is correctly placed
+if [ -f dist/.env ]; then
+    echo "Moving .env file to the application root..."
+    sudo mv dist/.env ./.env
+else
+    echo "Error: .env file not found in the artifact."
+    exit 1
+fi
 
 echo "Installing dependencies..."
 sudo -u csye6225 npm install

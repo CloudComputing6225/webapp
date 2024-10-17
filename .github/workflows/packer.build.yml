@@ -42,6 +42,7 @@ jobs:
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
           echo "PORT=8080" >> .env
+          sudo mv .env /opt/app/.env
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3

@@ -52,6 +52,26 @@ variable "artifact_path" {
   default = "./webapp-artifact.zip"
 }
 
+variable "DB_USER" {
+  type    = string
+  default = ""
+}
+
+variable "DB_PASSWORD" {
+  type    = string
+  default = ""
+}
+
+variable "DB_NAME" {
+  type    = string
+  default = ""
+}
+
+variable "PORT" {
+  type    = string
+  default = "8080"
+}
+
 source "amazon-ebs" "ubuntu" {
   ami_name      = "${var.app_name}-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_type = var.instance_type

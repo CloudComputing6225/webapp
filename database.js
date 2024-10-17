@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: '/opt/app/.env' });
 
 
 import { Sequelize } from 'sequelize';

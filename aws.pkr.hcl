@@ -99,6 +99,9 @@ build {
   provisioner "shell" {
     script = "scripts/setupmysql.sh"
   }
+  provisioner "shell" {
+    script = "scripts/createenv.sh"
+  }
 
   provisioner "shell" {
     script = "scripts/createuser.sh"
@@ -115,4 +118,5 @@ build {
   provisioner "shell" {
     script = "scripts/cleanup.sh"
   }
+  
 }

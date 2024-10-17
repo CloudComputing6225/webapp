@@ -84,13 +84,14 @@ jobs:
         run: chmod +x scripts/*.sh
 
       - name: Build custom AMI
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          PORT: ${{ secrets.PORT }}
         run: |
           packer init .
           packer build -debug \
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
-            -var "DB_USER=${{ secrets.DB_USER }}" \
-            -var "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            -var "DB_NAME=${{ secrets.DB_NAME }}" \
-            -var "PORT=${{ secrets.PORT }}" \
             aws.pkr.hcl

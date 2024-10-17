@@ -64,7 +64,7 @@ variable "DB_PASSWORD" {
 
 variable "DB_NAME" {
   type    = string
-  default = ""
+  default = "webapp"
 }
 
 variable "PORT" {
@@ -117,6 +117,11 @@ build {
   }
 
   provisioner "shell" {
+    environment_vars = [
+      "DB_NAME=${env("DB_NAME")}",
+      "DB_USER=${env("DB_USER")}",
+      "DB_PASSWORD=${env("DB_PASSWORD")}"
+    ]
     script = "scripts/setupmysql.sh"
   }
 

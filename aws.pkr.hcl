@@ -97,9 +97,6 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/setupapp.sh"
-  }
-  provisioner "shell" {
     script = "scripts/setupmysql.sh"
   }
 
@@ -107,6 +104,9 @@ build {
     script = "scripts/createuser.sh"
   }
 
+  provisioner "shell" {
+    script = "scripts/setupapp.sh"
+  }
 
   provisioner "shell" {
     script = "scripts/systemd.sh"

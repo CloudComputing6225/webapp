@@ -10,7 +10,7 @@ echo "Starting MySQL service..."
 sudo systemctl enable mysql
 sudo systemctl start mysql
 
-echo "ALTER USER 'webapp_user'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD'; FLUSH PRIVILEGES; CREATE DATABASE webapp;GRANT ALL PRIVILEGES ON webapp.* TO 'webapp_user'@'127.0.0.1'; " | sudo mysql
+echo "ALTER USER 'root'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD'; FLUSH PRIVILEGES; CREATE DATABASE webapp; " | sudo mysql
 
 
 echo "MySQL setup completed."

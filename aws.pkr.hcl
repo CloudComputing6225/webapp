@@ -53,19 +53,23 @@ variable "artifact_path" {
 }
 # Define DB Variables
 variable "db_name" {
-  type = string
+  type    = string
+  default = "webapp"
 }
 
 variable "db_user" {
-  type = string
+  type    = string
+  default = "root"
 }
 
 variable "db_password" {
-  type = string
+  type    = string
+  default = "root"
 }
 
 variable "db_host" {
-  type = string
+  type    = string
+  default = "127.0.0.1"
 }
 
 source "amazon-ebs" "ubuntu" {

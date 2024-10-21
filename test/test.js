@@ -14,7 +14,7 @@ describe('User API Test Cases', () => {
 
   /** USER CREATION TESTS **/
   
-  it('should create a new user (POST /v1/user)', async () => {
+  it('should create a new user (POST /v2/user)', async () => {
     const response = await request(app)
       .post('/v1/user')
       .send({

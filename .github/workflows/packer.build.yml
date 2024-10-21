@@ -79,10 +79,7 @@ jobs:
             -var "aws_region=${{ env.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
             -var "db_name=${{ secrets.DB_NAME }}" \
-
             -var "db_user=${{ secrets.DB_USER }}" \
-
             -var "db_password=${{ secrets.DB_PASSWORD }}" \
-
             -var "db_host=${{ secrets.DB_HOST }}" \
             aws.pkr.hcl

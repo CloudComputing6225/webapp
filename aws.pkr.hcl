@@ -51,6 +51,26 @@ variable "artifact_path" {
   type    = string
   default = "./webapp-artifact.zip"
 }
+# Define DB Variables
+variable "db_name" {
+  type    = string
+  default = "webapp"
+}
+
+variable "db_user" {
+  type    = string
+  default = "root"
+}
+
+variable "db_password" {
+  type    = string
+  default = "root"
+}
+
+variable "db_host" {
+  type    = string
+  default = "127.0.0.1"
+}
 
 source "amazon-ebs" "ubuntu" {
   ami_name      = "${var.app_name}-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
@@ -97,6 +117,12 @@ build {
   }
 
   provisioner "shell" {
+    environment_vars = [
+      "DB_NAME=${var.db_name}",
+      "DB_USER=${var.db_user}",
+      "DB_PASSWORD=${var.db_password}",
+      "DB_HOST=${var.db_host}"
+    ]
     script = "scripts/setupmysql.sh"
   }
 

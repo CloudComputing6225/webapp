@@ -14,9 +14,9 @@ describe('User API Test Cases', () => {
 
   /** USER CREATION TESTS **/
   
-  it('should create a new user (POST /v1/user)', async () => {
+  it('should create a new user (POST /v2/user)', async () => {
     const response = await request(app)
-      .post('/v1/user')
+      .post('/v2/user')
       .send({
         email: createdUserEmail,
         password: createdUserPassword,
@@ -29,7 +29,7 @@ describe('User API Test Cases', () => {
 
   it('should return 400 if fields are missing (POST /user)', async () => {
     const response = await request(app)
-      .post('/v1/user')
+      .post('/v2/user')
       .send({
         email: createdUserEmail, // Missing password, first_name, last_name
       });
@@ -38,26 +38,26 @@ describe('User API Test Cases', () => {
 
   /** USER AUTHENTICATION TESTS **/
 
-  it('should return user information (GET /v1/user/self)', async () => {
+  it('should return user information (GET /v2/user/self)', async () => {
     const response = await request(app)
-      .get('/v1/user/self')
+      .get('/v2/user/self')
       .auth('ssa@gmail.com', '123');
     expect(response.statusCode).toBe(200);
     expect(response.body).toHaveProperty('email', createdUserEmail);
   });
 
-  it('should return 401 if credentials are incorrect (GET /v1/user/self)', async () => {
+  it('should return 401 if credentials are incorrect (GET /v2/user/self)', async () => {
     const response = await request(app)
-      .get('/v1/user/self')
+      .get('/v2/user/self')
       .auth('wronguser@example.com', 'wrongpassword');
     expect(response.statusCode).toBe(401);
   });
 
   /** USER UPDATE TESTS **/
 
-  it('should update user information (PUT /v1/user/self)', async () => {
+  it('should update user information (PUT /v2/user/self)', async () => {
     const response = await request(app)
-      .put('/v1/user/self')
+      .put('/v2/user/self')
       .auth('ssa@gmail.com', '123')
       .send({
         first_name: 'Jane',
@@ -67,9 +67,9 @@ describe('User API Test Cases', () => {
     expect(response.statusCode).toBe(204);
   });
 
-  it('should return 400 if no fields are provided for update (PUT /v1/user/self)', async () => {
+  it('should return 400 if no fields are provided for update (PUT /v2/user/self)', async () => {
     const response = await request(app)
-      .put('/v1/user/self')
+      .put('/v2/user/self')
       .auth('ssa@gmail.com', 'newpassword123')
       .send({});
     expect(response.statusCode).toBe(400);

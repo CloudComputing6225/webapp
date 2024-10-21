@@ -25,7 +25,7 @@ router.route('/healthz')
   });
 
 // Create a new user
-router.post('/v1/user', userController.createUser);
+router.post('/v2/user', userController.createUser);
 
 router.route('/v1/user/self')
 .get(userController.authenticateUser, userController.getUserInfo)

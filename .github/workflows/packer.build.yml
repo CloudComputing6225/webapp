@@ -27,7 +27,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -56,6 +56,6 @@ jobs:
         run: |
           packer init .
           packer build -debug \
-            -var "aws_region=${{ env.AWS_REGION }}" \
+            -var "aws_region=${{ secrets.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
             aws.pkr.hcl

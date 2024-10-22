@@ -11,7 +11,6 @@ After=network.target
 Type=simple
 User=csye6225
 WorkingDirectory=/opt/app
-EnvironmentFile=/opt/app/.env
 ExecStart=/usr/bin/node /opt/app/app.js
 Restart=on-failure
 TimeoutStartSec=60

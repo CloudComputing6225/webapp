@@ -22,7 +22,6 @@ sudo rm -rf packer
 
 echo "Setting correct ownership..."
 sudo chown -R csye6225:csye6225 .
-sudo chmod -R 755 /opt/app
 
 echo "Installing dependencies..."
 sudo -u csye6225 npm install

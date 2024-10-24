@@ -21,7 +21,7 @@ echo "Removing packer directory if it exists..."
 sudo rm -rf packer
 
 echo "Setting correct ownership..."
-sudo chown -R csye6225:csye6225 .
+sudo chown -R csye6225:csye6225 /opt/app/node_modules
 
 echo "Installing dependencies..."
 sudo -u csye6225 npm install

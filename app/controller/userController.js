@@ -5,19 +5,15 @@ import checkDatabaseConnection from '../services/healthServices.js';
 import logger from '../../utils/logger.js';
 import sdc from '../../utils/statsd.js';
 
-
-
 const healthCheck = async (req, res) => {
-   // Reject requests with query parameters
-   if (Object.keys(req.query).length !== 0) {
+  const start = Date.now();
+  sdc.increment('api.healthCheck.calls');
+
+  if (Object.keys(req.query).length !== 0 || Object.keys(req.body).length !== 0) {
+    sdc.timing('api.healthCheck.time', Date.now() - start);
     return res.status(400).send();
   }
-  // Reject requests with a payload
-  if (Object.keys(req.body).length !== 0) {
-    return res.status(400).end();
-  }
 
-  // Check database connection
   const isDatabaseConnected = await checkDatabaseConnection();
   res.set({
     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -25,47 +21,56 @@ const healthCheck = async (req, res) => {
     'X-Content-Type-Options': 'nosniff',
   });
 
+  sdc.timing('api.healthCheck.time', Date.now() - start);
   if (isDatabaseConnected) {
-    // If connected, return 200 OK
+    logger.info('Health check successful');
     return res.status(200).end();
   } else {
-    // If not connected, return 503 Service Unavailable
+    logger.warn('Health check failed: Database not connected');
     return res.status(503).end();
   }
 };
 
-// Hashing password with bcrypt
 const hashPassword = async (password) => {
+  const start = Date.now();
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
+  sdc.timing('function.hashPassword.time', Date.now() - start);
   return hashedPassword;
 };
 
-// Creating a new user
 const createUser = async (req, res) => {
-  const start = Date.now(); 
+  const start = Date.now();
   sdc.increment('api.createUser.calls');
-  
-  const { email, password, first_name, last_name, account_created, account_updated, ...rest  } = req.body;
+  logger.info('Creating user - start');
+
+  const { email, password, first_name, last_name, account_created, account_updated, ...rest } = req.body;
 
   if (account_created || account_updated || Object.keys(rest).length !== 0) {
+    logger.warn('Invalid user creation attempt: extra fields provided');
+    sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
   }
 
-  // Check if all fields are provided
   if (!email || !password || !first_name || !last_name) {
+    logger.warn('Invalid user creation attempt: missing required fields');
+    sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
   }
 
-  // Check if the email already exists
+  const dbStart = Date.now();
   const existingUser = await User.findOne({ where: { email } });
+  sdc.timing('db.findUser.time', Date.now() - dbStart);
+
   if (existingUser) {
+    logger.warn('User creation failed: email already exists', { email });
+    sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
   }
 
   try {
-    // Hash password before storing
     const hashedPassword = await hashPassword(password);
+    const dbCreateStart = Date.now();
     const newUser = await User.create({
       email,
       password: hashedPassword,
@@ -74,65 +79,93 @@ const createUser = async (req, res) => {
       account_created: new Date(),
       account_updated: new Date()
     });
-    // Exclude password from response
+    sdc.timing('db.createUser.time', Date.now() - dbCreateStart);
+
     const { password: _, ...userWithoutPassword } = newUser.toJSON();
-    logger.info('User created successfully');
+    logger.info('User created successfully', { userId: newUser.id });
     sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(201).send(userWithoutPassword);
   } catch (error) {
-    logger.error('Error creating user', { error: error.message });
+    logger.error('Error creating user', { error: error.message, stack: error.stack });
     sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
   }
 };
 
-// Authentication middleware
 const authenticateUser = async (req, res, next) => {
+  const start = Date.now();
+  sdc.increment('api.authenticateUser.calls');
+
   const userCredentials = basicAuth(req);
-  
 
   if (!userCredentials || !userCredentials.name || !userCredentials.pass) {
+    logger.warn('Authentication failed: missing credentials');
+    sdc.timing('api.authenticateUser.time', Date.now() - start);
     return res.status(401).send();
   }
 
+  const dbStart = Date.now();
   const user = await User.findOne({ where: { email: userCredentials.name } });
+  sdc.timing('db.findUser.time', Date.now() - dbStart);
 
   if (!user) {
+    logger.warn('Authentication failed: user not found', { email: userCredentials.name });
+    sdc.timing('api.authenticateUser.time', Date.now() - start);
     return res.status(401).send();
   }
 
   const isPasswordValid = await bcrypt.compare(userCredentials.pass, user.password);
   if (!isPasswordValid) {
+    logger.warn('Authentication failed: invalid password', { email: userCredentials.name });
+    sdc.timing('api.authenticateUser.time', Date.now() - start);
     return res.status(401).send();
   }
 
   req.user = user;
+  logger.info('User authenticated successfully', { userId: user.id });
+  sdc.timing('api.authenticateUser.time', Date.now() - start);
   next();
 };
 
-// Get user information
 const getUserInfo = async (req, res) => {
+  const start = Date.now();
+  sdc.increment('api.getUserInfo.calls');
+
   if (Object.keys(req.query).length !== 0) {
+    logger.warn('Invalid get user info attempt: query parameters provided');
+    sdc.timing('api.getUserInfo.time', Date.now() - start);
     return res.status(400).send();
   }
+
   const user = req.user;
   const { password, ...userWithoutPassword } = user.toJSON();
+  logger.info('User info retrieved successfully', { userId: user.id });
+  sdc.timing('api.getUserInfo.time', Date.now() - start);
   return res.status(200).send(userWithoutPassword);
 };
 
-// Update user information
 const updateUser = async (req, res) => {
+  const start = Date.now();
+  sdc.increment('api.updateUser.calls');
+
   if (Object.keys(req.query).length !== 0) {
+    logger.warn('Invalid update user attempt: query parameters provided');
+    sdc.timing('api.updateUser.time', Date.now() - start);
     return res.status(400).send();
   }
+
   const user = req.user;
-  const { first_name, last_name, password,email } = req.body;
+  const { first_name, last_name, password, email } = req.body;
 
   if (email) {
+    logger.warn('Invalid update user attempt: trying to update email');
+    sdc.timing('api.updateUser.time', Date.now() - start);
     return res.status(400).send();
   }
 
   if (!first_name && !last_name && !password) {
+    logger.warn('Invalid update user attempt: no fields to update');
+    sdc.timing('api.updateUser.time', Date.now() - start);
     return res.status(400).send();
   }
 
@@ -142,16 +175,19 @@ const updateUser = async (req, res) => {
     if (password) user.password = await hashPassword(password);
 
     user.account_updated = new Date();
+    const dbStart = Date.now();
     await user.save();
+    sdc.timing('db.updateUser.time', Date.now() - dbStart);
 
-    return res.status(204).send({
-      account_updated: user.account_updated
-    });
+    logger.info('User updated successfully', { userId: user.id });
+    sdc.timing('api.updateUser.time', Date.now() - start);
+    return res.status(204).send();
   } catch (error) {
+    logger.error('Error updating user', { userId: user.id, error: error.message, stack: error.stack });
+    sdc.timing('api.updateUser.time', Date.now() - start);
     return res.status(400).send();
   }
 };
-
 
 export default {
   createUser,

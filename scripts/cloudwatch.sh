@@ -10,6 +10,10 @@ sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
 
 echo "CloudWatch agent downloaded and installed successfully!"
 
+sudo touch /opt/app/webapp.log
+sudo chmod 644 /opt/app/webapp.log
+sudo chown root:root /opt/app/webapp.log
+
 # Create a basic configuration file for the CloudWatch agent
 sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json > /dev/null << EOL
 {
@@ -41,8 +45,6 @@ sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json > /de
   }
 }
 EOL
-sudo chmod 644 /opt/app/webapp.log
-sudo chown root:root /opt/app/webapp.log
 
 # Start the CloudWatch agent
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json

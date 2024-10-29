@@ -43,6 +43,8 @@ const hashPassword = async (password) => {
 
 // Creating a new user
 const createUser = async (req, res) => {
+  const start = Date.now(); 
+  sdc.increment('api.createUser.calls');
   
   const { email, password, first_name, last_name, account_created, account_updated, ...rest  } = req.body;
 

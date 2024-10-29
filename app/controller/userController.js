@@ -4,7 +4,10 @@ import basicAuth from 'basic-auth';
 import checkDatabaseConnection from '../services/healthServices.js';
 import logger from '../../utils/logger.js';
 import sdc from '../../utils/statsd.js';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from 'uuid';
 
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const healthCheck = async (req, res) => {
   const start = Date.now();
   sdc.increment('api.healthCheck.calls');
@@ -188,6 +191,106 @@ const updateUser = async (req, res) => {
     return res.status(400).send();
   }
 };
+const addProfilePicture = async (req, res) => {
+  const start = Date.now();
+  sdc.increment('api.addProfilePicture.calls');
+
+  try {
+    if (!req.file) {
+      logger.warn('No file uploaded');
+      sdc.timing('api.addProfilePicture.time', Date.now() - start);
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const file = req.file;
+    const userId = req.user.id;
+    const fileId = uuidv4();
+    const fileExtension = file.originalname.split('.').pop();
+    const fileName = `${fileId}.${fileExtension}`;
+    const s3Key = `${userId}/${fileName}`;
+
+    const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: s3Key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+
+    const s3Start = Date.now();
+    const command = new PutObjectCommand(params);
+    await s3Client.send(command);
+    sdc.timing('s3.putObject.time', Date.now() - s3Start);
+
+    const imageMetadata = {
+      file_name: file.originalname,
+      id: fileId,
+      url: `${process.env.S3_BUCKET_URL}/${s3Key}`,
+      upload_date: new Date().toISOString(),
+      user_id: userId,
+    };
+
+    const dbStart = Date.now();
+    await User.update(
+      { profile_pic: imageMetadata },
+      { where: { id: userId } }
+    );
+    sdc.timing('db.updateUser.time', Date.now() - dbStart);
+
+    logger.info('Profile picture uploaded successfully', { userId, fileId });
+    sdc.timing('api.addProfilePicture.time', Date.now() - start);
+    res.status(201).json(imageMetadata);
+  } catch (error) {
+    logger.error('Error uploading profile picture', { error: error.message, stack: error.stack });
+    sdc.timing('api.addProfilePicture.time', Date.now() - start);
+    res.status(500).json({ message: 'Error uploading file' });
+  }
+};
+
+const deleteProfilePicture = async (req, res) => {
+  const start = Date.now();
+  sdc.increment('api.deleteProfilePicture.calls');
+
+  try {
+    const userId = req.user.id;
+    const dbStart = Date.now();
+    const user = await User.findByPk(userId);
+    sdc.timing('db.findUser.time', Date.now() - dbStart);
+
+    if (!user.profile_pic) {
+      logger.warn('No profile picture found for deletion', { userId });
+      sdc.timing('api.deleteProfilePicture.time', Date.now() - start);
+      return res.status(404).json({ message: 'No profile picture found' });
+    }
+
+    const imageMetadata = user.profile_pic;
+    const s3Key = `${userId}/${imageMetadata.id}.${imageMetadata.file_name.split('.').pop()}`;
+
+    const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: s3Key,
+    };
+
+    const s3Start = Date.now();
+    const command = new DeleteObjectCommand(params);
+    await s3Client.send(command);
+    sdc.timing('s3.deleteObject.time', Date.now() - s3Start);
+
+    const dbDeleteStart = Date.now();
+    await User.update(
+      { profile_pic: null },
+      { where: { id: userId } }
+    );
+    sdc.timing('db.updateUser.time', Date.now() - dbDeleteStart);
+
+    logger.info('Profile picture deleted successfully', { userId });
+    sdc.timing('api.deleteProfilePicture.time', Date.now() - start);
+    res.status(204).send();
+  } catch (error) {
+    logger.error('Error deleting profile picture', { error: error.message, stack: error.stack });
+    sdc.timing('api.deleteProfilePicture.time', Date.now() - start);
+    res.status(500).json({ message: 'Error deleting file' });
+  }
+};
 
 export default {
   createUser,
@@ -195,4 +298,6 @@ export default {
   getUserInfo,
   updateUser,
   healthCheck,
+  addProfilePicture,
+  deleteProfilePicture,
 };

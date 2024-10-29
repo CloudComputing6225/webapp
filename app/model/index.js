@@ -32,6 +32,10 @@ const User = sequelize.define('User', {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW
+    },
+    profile_pic: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
   }, {
     tableName: 'users',

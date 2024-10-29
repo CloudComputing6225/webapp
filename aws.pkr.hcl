@@ -105,6 +105,10 @@ build {
   }
 
   provisioner "shell" {
+    script = "scripts/cloudwatch.sh"
+  }
+
+  provisioner "shell" {
     script = "scripts/systemd.sh"
   }
 

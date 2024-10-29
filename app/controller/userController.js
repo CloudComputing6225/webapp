@@ -2,6 +2,8 @@ import bcrypt from 'bcrypt';
 import User from '../model/index.js';
 import basicAuth from 'basic-auth';
 import checkDatabaseConnection from '../services/healthServices.js';
+import logger from '../../utils/logger.js';
+import sdc from '../../utils/statsd.js';
 
 
 
@@ -41,6 +43,8 @@ const hashPassword = async (password) => {
 
 // Creating a new user
 const createUser = async (req, res) => {
+  const start = Date.now(); 
+  sdc.increment('api.createUser.calls');
   
   const { email, password, first_name, last_name, account_created, account_updated, ...rest  } = req.body;
 
@@ -72,8 +76,12 @@ const createUser = async (req, res) => {
     });
     // Exclude password from response
     const { password: _, ...userWithoutPassword } = newUser.toJSON();
+    logger.info('User created successfully');
+    sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(201).send(userWithoutPassword);
   } catch (error) {
+    logger.error('Error creating user', { error: error.message });
+    sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
   }
 };

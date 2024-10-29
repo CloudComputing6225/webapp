@@ -1,7 +1,9 @@
 import express from 'express';
+import multer from 'multer';
 import userController from '../controller/userController.js';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.route('/healthz')
   .get(userController.healthCheck)
@@ -48,5 +50,17 @@ router.route('/v2/user/self')
     });
     return res.status(405).end(); // Method Not Allowed
   });
+  router.route('/v2/user/self/pic')
+  .post(userController.authenticateUser, upload.single('file'), userController.addProfilePicture)
+  .delete(userController.authenticateUser, userController.deleteProfilePicture)
+  .all((req, res) => {
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return res.status(405).end(); // Method Not Allowed
+  });
+
 
 export default router;

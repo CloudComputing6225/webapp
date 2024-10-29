@@ -27,8 +27,8 @@ sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json > /de
         "collect_list": [
           {
             "file_path": "/opt/app/webapp.log",
-            "log_group_name": "csye6225-webapp-logs",
-            "log_stream_name": "{instance_id}"
+            "log_group_name": "csye6225",
+            "log_stream_name": "webapp",
           }
         ]
       }

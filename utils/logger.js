@@ -3,10 +3,10 @@ import WinstonCloudWatch from 'winston-cloudwatch';
 
 const logger = winston.createLogger({
   transports: [
-    new winston.transports.Console(),
+    new winston.transports.File({ filename: '/opt/app/webapp.log' }),
     new WinstonCloudWatch({
-      logGroupName: 'csye6225-webapp-logs',
-      logStreamName: `webapp-${new Date().toISOString()}`,
+      logGroupName: 'csye6225',
+      logStreamName: 'webapp',
       awsRegion: 'us-east-1',
     })
   ]

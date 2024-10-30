@@ -214,6 +214,13 @@ const addProfilePicture = async (req, res) => {
 
     // const file = req.file;
     const userId = req.user.id;
+     // Check if a profile picture already exists
+     const existingUser = await User.findByPk(userId);
+     if (existingUser && existingUser.profile_pic) {
+       logger.warn('User already has a profile picture');
+       sdc.timing('api.addProfilePicture.time', Date.now() - start);
+       return res.status(400).json({ message: 'Profile picture already exists. Delete the existing one first.' });
+     }
     const fileId = uuidv4();
     // const fileExtension = file.originalname.split('.').pop();
     const fileName = `${fileId}.${fileExtension}`;
@@ -314,20 +321,21 @@ const getProfilePicture = async (req, res) => {
         return res.status(404).json({ message: 'No profile picture found.' });
     }
 
-    const s3Key = user.profile_pic;
+    const profilePic = user.profile_pic;
     const params = {
         Bucket: process.env.S3_BUCKET_NAME,
-        Key: s3Key,
+        Key: profilePic.url,
     };
 
     try {
         const command = new GetObjectCommand(params);
         const urlStart = Date.now();
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });  // URL expires in 1 hour
+        profilePic.url = url;
         sdc.timing('s3.getSignedUrl.time', Date.now() - urlStart); // Timing how long it takes to get signed URL
 
         sdc.timing('api.getProfilePicture.time', Date.now() - start);
-        return res.status(200).json({ url });
+        return res.status(200).json({ profilePic });
     } catch (error) {
         logger.error('Failed to generate image URL', { error: error.message, stack: error.stack });
         sdc.timing('api.getProfilePicture.time', Date.now() - start);

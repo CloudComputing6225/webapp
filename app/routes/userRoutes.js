@@ -52,6 +52,7 @@ router.route('/v2/user/self')
   });
   router.route('/v2/user/self/pic')
   .post(userController.authenticateUser, upload.single('file'), userController.addProfilePicture)
+  .get(userController.authenticateUser, userController.getProfilePicture)
   .delete(userController.authenticateUser, userController.deleteProfilePicture)
   .all((req, res) => {
     res.set({

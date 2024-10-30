@@ -6,6 +6,8 @@ import logger from '../../utils/logger.js';
 import sdc from '../../utils/statsd.js';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from 'uuid';
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const healthCheck = async (req, res) => {
@@ -201,11 +203,19 @@ const addProfilePicture = async (req, res) => {
       sdc.timing('api.addProfilePicture.time', Date.now() - start);
       return res.status(400).json({ message: 'No file uploaded' });
     }
-
     const file = req.file;
+    const fileExtension = file.originalname.split('.').pop().toLowerCase();
+    const validExtensions = ['png', 'jpg', 'jpeg'];
+    if (!validExtensions.includes(fileExtension)) {
+        logger.warn('Invalid file type uploaded');
+        sdc.timing('api.addProfilePicture.time', Date.now() - start);
+        return res.status(400).json({ message: 'Unsupported file type' });
+    }
+
+    // const file = req.file;
     const userId = req.user.id;
     const fileId = uuidv4();
-    const fileExtension = file.originalname.split('.').pop();
+    // const fileExtension = file.originalname.split('.').pop();
     const fileName = `${fileId}.${fileExtension}`;
     const s3Key = `${userId}/${fileName}`;
 
@@ -292,6 +302,40 @@ const deleteProfilePicture = async (req, res) => {
   }
 };
 
+const getProfilePicture = async (req, res) => {
+    const start = Date.now();
+    sdc.increment('api.getProfilePicture.calls');
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.profile_pic) {
+        logger.warn('No profile picture found', { userId });
+        sdc.timing('api.getProfilePicture.time', Date.now() - start);
+        return res.status(404).json({ message: 'No profile picture found.' });
+    }
+
+    const s3Key = user.profile_pic;
+    const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: s3Key,
+    };
+
+    try {
+        const command = new GetObjectCommand(params);
+        const urlStart = Date.now();
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });  // URL expires in 1 hour
+        sdc.timing('s3.getSignedUrl.time', Date.now() - urlStart); // Timing how long it takes to get signed URL
+
+        sdc.timing('api.getProfilePicture.time', Date.now() - start);
+        return res.status(200).json({ url });
+    } catch (error) {
+        logger.error('Failed to generate image URL', { error: error.message, stack: error.stack });
+        sdc.timing('api.getProfilePicture.time', Date.now() - start);
+        return res.status(400).json({ message: 'Failed to retrieve image.' });
+    }
+};
+
+
 export default {
   createUser,
   authenticateUser,
@@ -300,4 +344,5 @@ export default {
   healthCheck,
   addProfilePicture,
   deleteProfilePicture,
+  getProfilePicture
 };

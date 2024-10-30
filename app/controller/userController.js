@@ -242,7 +242,7 @@ const addProfilePicture = async (req, res) => {
   } catch (error) {
     logger.error('Error uploading profile picture', { error: error.message, stack: error.stack });
     sdc.timing('api.addProfilePicture.time', Date.now() - start);
-    res.status(500).json({ message: 'Error uploading file' });
+    res.status(400).json({ message: 'Error uploading file' });
   }
 };
 

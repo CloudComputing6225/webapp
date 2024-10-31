@@ -11,7 +11,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
 
 // Initialize Mailgun with your API key and domain
-const mg = mailgun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN});
+const mg = mailgun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.main_domain_name});
 
 const sendWelcomeEmail = (email, firstName) => {
   const data = {

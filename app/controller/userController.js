@@ -11,25 +11,25 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
 
 // Initialize Mailgun with your API key and domain
-const mg = mailgun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.main_domain_name});
+// const mg = mailgun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.main_domain_name});
 
-const sendWelcomeEmail = (email, firstName) => {
-  const data = {
-    from: 'noreply@saurabhprojects.me',
-    to: email,
-    subject: 'Welcome to Our Cool App!',
-    text: `Hello ${firstName},\nThank you for registering with us! We are excited to have you on board.`
-  };
-  // Sending the email
-  mg.messages().send(data, function (error, body) {
-    console.log(body);
-    if (error) {
-      logger.info('Mailgun error:', error);
-    } else {
-      logger.info('Email sent:', body);
-    }
-  });
-};
+// const sendWelcomeEmail = (email, firstName) => {
+//   const data = {
+//     from: 'noreply@saurabhprojects.me',
+//     to: email,
+//     subject: 'Welcome to Our Cool App!',
+//     text: `Hello ${firstName},\nThank you for registering with us! We are excited to have you on board.`
+//   };
+//   // Sending the email
+//   mg.messages().send(data, function (error, body) {
+//     console.log(body);
+//     if (error) {
+//       logger.info('Mailgun error:', error);
+//     } else {
+//       logger.info('Email sent:', body);
+//     }
+//   });
+// };
 
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
@@ -107,7 +107,7 @@ const createUser = async (req, res) => {
       account_created: new Date(),
       account_updated: new Date()
     });
-    sendWelcomeEmail(newUser.email, newUser.first_name);
+    // sendWelcomeEmail(newUser.email, newUser.first_name);
     sdc.timing('db.createUser.time', Date.now() - dbCreateStart);
 
     const { password: _, ...userWithoutPassword } = newUser.toJSON();

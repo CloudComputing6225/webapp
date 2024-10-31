@@ -45,8 +45,6 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
-          echo "MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}" >> .env
-          echo "main_domain_name=${{ secrets.domain_name }}" >> .env
           echo "PORT=3000" >> .env
 
       - name: Wait for MySQL to be ready

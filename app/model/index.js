@@ -36,6 +36,19 @@ const User = sequelize.define('User', {
     profile_pic: {
       type: DataTypes.JSON,
       allowNull: true
+    },
+    is_verified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    verification_token: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    verification_token_expires: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {
     tableName: 'users',

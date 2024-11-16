@@ -62,6 +62,8 @@ router.route('/v2/user/self')
     });
     return res.status(405).end(); // Method Not Allowed
   });
+  // Add new route for email verification
+  router.get('/v2/verify', userController.verifyEmail);
 
 
 export default router;

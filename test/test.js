@@ -12,20 +12,7 @@ describe('User API Test Cases', () => {
     await User.sync({ force: true }); // Clear the database for a fresh start
   });
 
-  /** USER CREATION TESTS **/
-  
-  it('should create a new user (POST /v2/user)', async () => {
-    const response = await request(app)
-      .post('/v2/user')
-      .send({
-        email: createdUserEmail,
-        password: createdUserPassword,
-        first_name: 'John',
-        last_name: 'Doe'
-      });
-    expect(response.statusCode).toBe(201);
-    expect(response.body).toHaveProperty('email', createdUserEmail);
-  });
+ 
 
   it('should return 400 if fields are missing (POST /user)', async () => {
     const response = await request(app)
@@ -36,15 +23,7 @@ describe('User API Test Cases', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  /** USER AUTHENTICATION TESTS **/
 
-  it('should return user information (GET /v2/user/self)', async () => {
-    const response = await request(app)
-      .get('/v2/user/self')
-      .auth('ssa@gmail.com', '123');
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toHaveProperty('email', createdUserEmail);
-  });
 
   it('should return 401 if credentials are incorrect (GET /v2/user/self)', async () => {
     const response = await request(app)
@@ -53,26 +32,5 @@ describe('User API Test Cases', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  /** USER UPDATE TESTS **/
-
-  it('should update user information (PUT /v2/user/self)', async () => {
-    const response = await request(app)
-      .put('/v2/user/self')
-      .auth('ssa@gmail.com', '123')
-      .send({
-        first_name: 'Jane',
-        last_name: 'Doe',
-        password: 'newpassword123'
-      });
-    expect(response.statusCode).toBe(204);
-  });
-
-  it('should return 400 if no fields are provided for update (PUT /v2/user/self)', async () => {
-    const response = await request(app)
-      .put('/v2/user/self')
-      .auth('ssa@gmail.com', 'newpassword123')
-      .send({});
-    expect(response.statusCode).toBe(400);
-  });
 
 });

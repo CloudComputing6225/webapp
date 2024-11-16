@@ -9,27 +9,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
+import AWS from 'aws-sdk';
 
-// Initialize Mailgun with your API key and domain
-// const mg = mailgun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.main_domain_name});
 
-// const sendWelcomeEmail = (email, firstName) => {
-//   const data = {
-//     from: 'noreply@saurabhprojects.me',
-//     to: email,
-//     subject: 'Welcome to Our Cool App!',
-//     text: `Hello ${firstName},\nThank you for registering with us! We are excited to have you on board.`
-//   };
-//   // Sending the email
-//   mg.messages().send(data, function (error, body) {
-//     console.log(body);
-//     if (error) {
-//       logger.info('Mailgun error:', error);
-//     } else {
-//       logger.info('Email sent:', body);
-//     }
-//   });
-// };
+const sns = new AWS.SNS();
 
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
@@ -105,15 +88,27 @@ const createUser = async (req, res) => {
       first_name,
       last_name,
       account_created: new Date(),
-      account_updated: new Date()
+      account_updated: new Date(),
+      is_verified: false
     });
+    // Publish message to SNS topic
+    const message = JSON.stringify({
+      userId: newUser.id,
+      email: newUser.email,
+      firstName: newUser.first_name
+    });
+
+    await sns.publish({
+      TopicArn: process.env.SNS_TOPIC_ARN,
+      Message: message
+    }).promise();
     // sendWelcomeEmail(newUser.email, newUser.first_name);
     sdc.timing('db.createUser.time', Date.now() - dbCreateStart);
 
     const { password: _, ...userWithoutPassword } = newUser.toJSON();
     logger.info('User created successfully', { userId: newUser.id });
     sdc.timing('api.createUser.time', Date.now() - start);
-    return res.status(201).send(userWithoutPassword);
+    return res.status(201).send({userWithoutPassword, message: "User created. Please check your email for verification link."});
   } catch (error) {
     logger.error('Error creating user', { error: error.message, stack: error.stack });
     sdc.timing('api.createUser.time', Date.now() - start);
@@ -142,6 +137,11 @@ const authenticateUser = async (req, res, next) => {
     sdc.timing('api.authenticateUser.time', Date.now() - start);
     return res.status(401).send();
   }
+  if (!user.is_verified) {
+    logger.warn('Authentication failed: user not verified', { email: userCredentials.name });
+    sdc.timing('api.authenticateUser.time', Date.now() - start);
+    return res.status(403).send({ message: "Please verify your email before logging in." });
+  }
 
   const isPasswordValid = await bcrypt.compare(userCredentials.pass, user.password);
   if (!isPasswordValid) {
@@ -155,7 +155,40 @@ const authenticateUser = async (req, res, next) => {
   sdc.timing('api.authenticateUser.time', Date.now() - start);
   next();
 };
+const verifyEmail = async (req, res) => {
+  const { token } = req.query;
 
+  if (!token) {
+    return res.status(400).send({ message: "Verification token is required." });
+  }
+
+  try {
+    const user = await User.findOne({ where: { verification_token: token } });
+
+    if (!user) {
+      return res.status(400).send({ message: "Invalid verification token." });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).send({ message: "User is already verified." });
+    }
+
+    const tokenExpiration = new Date(user.verification_token_expires);
+    if (tokenExpiration < new Date()) {
+      return res.status(400).send({ message: "Verification token has expired." });
+    }
+
+    user.is_verified = true;
+    user.verification_token = null;
+    user.verification_token_expires = null;
+    await user.save();
+
+    return res.status(200).send({ message: "Email verified successfully. You can now log in." });
+  } catch (error) {
+    logger.error('Error verifying email', { error: error.message, stack: error.stack });
+    return res.status(400).send({ message: "An error occurred while verifying email." });
+  }
+};
 const getUserInfo = async (req, res) => {
   const start = Date.now();
   sdc.increment('api.getUserInfo.calls');
@@ -376,5 +409,6 @@ export default {
   healthCheck,
   addProfilePicture,
   deleteProfilePicture,
-  getProfilePicture
+  getProfilePicture,
+  verifyEmail
 };

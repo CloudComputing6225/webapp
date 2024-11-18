@@ -174,6 +174,7 @@ const verifyEmail = async (req, res) => {
         verification_token_expires: { [Op.gt]: new Date() }
       }
     });
+    logger.info('User found for email verification', { user });
 
     if (!user) {
       return res.status(400).send({ message: "Invalid verification token." });
@@ -190,7 +191,6 @@ const verifyEmail = async (req, res) => {
 
     user.is_verified = true;
     user.verification_token = null;
-    user.verification_token_expires = null;
     user.verification_token_expires = null;
     await user.save();
 

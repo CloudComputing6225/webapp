@@ -10,7 +10,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
 import AWS from 'aws-sdk';
-
+import crypto from 'crypto';
 
 const sns = new AWS.SNS();
 

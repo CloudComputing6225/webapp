@@ -37,12 +37,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      #   - name: Run Integration Tests
-      #     run: npm test -- --detectOpenHandles --verbose --forceExit
-
       - name: Build application artifact
-        run: |
-          npm run build
+        run: npm run build
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -59,3 +55,35 @@ jobs:
             -var "aws_region=${{ secrets.AWS_REGION }}" \
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
             aws.pkr.hcl
+
+      - name: Update Launch Template with latest AMI ID
+        id: updating
+        run: |
+          echo "Deploying Packer Build"
+          AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
+          echo "$AMI_ID"
+          echo "ami=$AMI_ID" >> "$GITHUB_OUTPUT"
+
+  autoscaling_refresh:
+    needs: packer-build
+    runs-on: ubuntu-latest
+    name: Auto scaling group launch template & instance refresh
+
+    steps:
+      - name: Configure AWS Credentials for Dev
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Configure the launch template
+        id: configuring
+        run: |
+          aws --version
+          aws ec2 describe-launch-templates
+          aws ec2 create-launch-template-version --launch-template-data '{"ImageId":"${{needs.packer-build.outputs.ami}}"}' --source-version 1 --launch-template-id ${{ vars.LAUNCH_TEMPLATE_ID }} --no-cli-pager
+
+      - name: Instance Refresh with latest AMI ID
+        id: refreshing
+        run: aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }}

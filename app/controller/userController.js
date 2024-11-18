@@ -10,7 +10,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
 import AWS from 'aws-sdk';
-
+import crypto from 'crypto';
 
 const sns = new AWS.SNS();
 
@@ -81,6 +81,8 @@ const createUser = async (req, res) => {
 
   try {
     const hashedPassword = await hashPassword(password);
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const tokenExpiration = new Date(Date.now() + 2 * 60 * 1000);
     const dbCreateStart = Date.now();
     const newUser = await User.create({
       email,
@@ -89,13 +91,16 @@ const createUser = async (req, res) => {
       last_name,
       account_created: new Date(),
       account_updated: new Date(),
-      is_verified: false
+      is_verified: false,
+      verification_token: verificationToken,
+      verification_token_expires: tokenExpiration
     });
     // Publish message to SNS topic
     const message = JSON.stringify({
       userId: newUser.id,
       email: newUser.email,
-      firstName: newUser.first_name
+      firstName: newUser.first_name,
+      verificationToken: verificationToken
     });
 
     await sns.publish({
@@ -105,7 +110,7 @@ const createUser = async (req, res) => {
     // sendWelcomeEmail(newUser.email, newUser.first_name);
     sdc.timing('db.createUser.time', Date.now() - dbCreateStart);
 
-    const { password: _, ...userWithoutPassword } = newUser.toJSON();
+    const { password: _, verification_token: __, ...userWithoutPassword } = newUser.toJSON();
     logger.info('User created successfully', { userId: newUser.id });
     sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(201).send({userWithoutPassword, message: "User created. Please check your email for verification link."});
@@ -163,7 +168,12 @@ const verifyEmail = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ where: { verification_token: token } });
+    const user = await User.findOne({ 
+      where: { 
+        verification_token: token,
+        verification_token_expires: { [Op.gt]: new Date() }
+      }
+    });
 
     if (!user) {
       return res.status(400).send({ message: "Invalid verification token." });
@@ -180,6 +190,7 @@ const verifyEmail = async (req, res) => {
 
     user.is_verified = true;
     user.verification_token = null;
+    user.verification_token_expires = null;
     user.verification_token_expires = null;
     await user.save();
 

@@ -161,7 +161,7 @@ const authenticateUser = async (req, res, next) => {
   next();
 };
 const verifyEmail = async (req, res) => {
-  console.log('Verification endpoint hit', { token: req.query.token });
+  logger.info('Verification endpoint hit', { token: req.query.token });
   const { token } = req.query;
   logger.info('Verification attempt', { token });
 

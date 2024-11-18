@@ -161,13 +161,16 @@ const authenticateUser = async (req, res, next) => {
   next();
 };
 const verifyEmail = async (req, res) => {
+  console.log('Verification endpoint hit', { token: req.query.token });
   const { token } = req.query;
+  logger.info('Verification attempt', { token });
 
   if (!token) {
     return res.status(400).send({ message: "Verification token is required." });
   }
 
   try {
+    logger.info('Searching for user with token', { token });
     const user = await User.findOne({ 
       where: { 
         verification_token: token,

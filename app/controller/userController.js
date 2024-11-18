@@ -11,6 +11,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import mailgun from 'mailgun-js';
 import AWS from 'aws-sdk';
 import crypto from 'crypto';
+import { Op } from 'sequelize';
 
 const sns = new AWS.SNS();
 
@@ -199,7 +200,12 @@ const verifyEmail = async (req, res) => {
 
     return res.status(200).send({ message: "Email verified successfully. You can now log in." });
   } catch (error) {
-    logger.error('Error verifying email', { error: error.message, stack: error.stack });
+    logger.error('Error verifying email', { 
+      error: error.message, 
+      stack: error.stack,
+      token: token,
+      fullError: error
+    });
     return res.status(400).send({ message: "An error occurred while verifying email." });
   }
 };

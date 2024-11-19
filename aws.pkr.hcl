@@ -53,7 +53,7 @@ variable "artifact_path" {
 }
 
 source "amazon-ebs" "ubuntu" {
-  ami_name      = "${var.app_name}"
+  ami_name      = "${var.app_name}-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_type = var.instance_type
   region        = var.aws_region
   source_ami    = var.source_ami
@@ -63,7 +63,7 @@ source "amazon-ebs" "ubuntu" {
 
   ami_users = [var.demo_account_id]
   tags = {
-    Name = "${var.app_name}"
+    Name = "${var.app_name}-${formatdate("YYYY-MM-DD", timestamp())}"
   }
 
   launch_block_device_mappings {
@@ -114,10 +114,5 @@ build {
 
   provisioner "shell" {
     script = "scripts/cleanup.sh"
-  }
-
-  post-processor "manifest" {
-    output     = "manifest.json"
-    strip_path = true
   }
 }

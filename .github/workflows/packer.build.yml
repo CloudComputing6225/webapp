@@ -59,10 +59,8 @@ jobs:
       - name: Update Launch Template with latest AMI ID
         id: updating
         run: |
-          echo "Deploying Packer Build"
-          AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
-          echo "$AMI_ID"
-          echo "ami=$AMI_ID" >> "$GITHUB_OUTPUT"
+          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp-*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
+          echo "AMI_ID=${AMI_ID}" >> $GITHUB_OUTPUT
 
   autoscaling_refresh:
     needs: packer-build
@@ -88,7 +86,7 @@ jobs:
           echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 
           # Get the latest AMI ID
-          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp" --query 'Images[0].ImageId' --output text)
+          AMI_ID="${{ needs.packer-build.outputs.AMI_ID }}"
           echo "Latest AMI ID: $AMI_ID"
 
           # Create new Launch Template version

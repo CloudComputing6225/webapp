@@ -56,11 +56,14 @@ jobs:
             -var "demo_account_id=${{ secrets.DEMO_ACCOUNT_ID }}" \
             aws.pkr.hcl
 
-      - name: Update Launch Template with latest AMI ID
-        id: updating
+      - name: Get latest AMI ID
+        id: ami
         run: |
           AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp-*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
           echo "AMI_ID=${AMI_ID}" >> $GITHUB_OUTPUT
+
+    outputs:
+      ami_id: ${{ steps.ami.outputs.AMI_ID }}
 
   autoscaling_refresh:
     needs: packer-build
@@ -69,27 +72,24 @@ jobs:
     name: Auto scaling group launch template & instance refresh
 
     steps:
-      - name: Configure AWS Credentials for Dev
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Configure the launch template
-        id: configuring
+      - name: Update Launch Template
+        id: update_launch_template
         run: |
           aws --version
 
-          # Get the Launch Template ID
           LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters "Name=launch-template-name,Values=csye6225_asg" --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
           echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 
-          # Get the latest AMI ID
-          AMI_ID="${{ needs.packer-build.outputs.AMI_ID }}"
+          AMI_ID="${{ needs.packer-build.outputs.ami_id }}"
           echo "Latest AMI ID: $AMI_ID"
 
-          # Create new Launch Template version
           NEW_VERSION=$(aws ec2 create-launch-template-version \
             --launch-template-id $LAUNCH_TEMPLATE_ID \
             --version-description "New version with updated AMI" \
@@ -99,21 +99,22 @@ jobs:
             --output text)
           echo "New Launch Template Version: $NEW_VERSION"
 
-          # Set the new version as default
           aws ec2 modify-launch-template --launch-template-id $LAUNCH_TEMPLATE_ID --default-version $NEW_VERSION
 
-      - name: Instance Refresh with latest AMI ID
-        id: refreshing
+      - name: Start Instance Refresh
+        id: start_refresh
         run: |
-          # Auto Scaling Group name
           ASG_NAME="csye6225-asg"
           echo "Auto Scaling Group Name: $ASG_NAME"
 
-          # Start instance refresh
           REFRESH_ID=$(aws autoscaling start-instance-refresh --auto-scaling-group-name $ASG_NAME --query 'InstanceRefreshId' --output text)
           echo "Instance Refresh ID: $REFRESH_ID"
 
-          # Wait for instance refresh to complete
+      - name: Wait for Instance Refresh
+        run: |
+          ASG_NAME="csye6225-asg"
+          REFRESH_ID="${{ steps.start_refresh.outputs.REFRESH_ID }}"
+
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $ASG_NAME --instance-refresh-ids $REFRESH_ID --query 'InstanceRefreshes[0].Status' --output text)
             echo "Refresh Status: $STATUS"

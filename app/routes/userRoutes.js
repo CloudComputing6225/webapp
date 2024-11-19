@@ -64,6 +64,7 @@ router.route('/v2/user/self')
   });
   // Add new route for email verification
   router.get('/v2/verify', userController.verifyEmail);
+  router.post('/v2/resend-verification', userController.resendVerificationLink);
 
 
 export default router;

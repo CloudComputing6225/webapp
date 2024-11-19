@@ -75,9 +75,43 @@ const createUser = async (req, res) => {
   sdc.timing('db.findUser.time', Date.now() - dbStart);
 
   if (existingUser) {
-    logger.warn('User creation failed: email already exists', { email });
-    sdc.timing('api.createUser.time', Date.now() - start);
-    return res.status(400).send();
+    // Handle resend verification logic
+    if (existingUser.is_verified) {
+      logger.warn('Resend verification attempt for verified user', { email });
+      return res.status(400).send({ message: "User is already verified." });
+    }
+
+    const now = new Date();
+    const twoMinutesAgo = new Date(now - 2 * 60 * 1000);
+
+    if (existingUser.last_verification_sent > twoMinutesAgo) {
+      logger.warn('Resend verification attempt too soon', { email });
+      return res.status(429).send({ message: "Please wait 2 minutes before requesting a new verification link." });
+    }
+
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const tokenExpiration = new Date(now.getTime() + 2 * 60 * 1000);
+
+    existingUser.verification_token = verificationToken;
+    existingUser.verification_token_expires = tokenExpiration;
+    existingUser.last_verification_sent = now;
+    await existingUser.save();
+
+    // Publish message to SNS topic
+    const message = JSON.stringify({
+      userId: existingUser.id,
+      email: existingUser.email,
+      firstName: existingUser.first_name,
+      verificationToken: verificationToken
+    });
+
+    await sns.publish({
+      TopicArn: process.env.SNS_TOPIC_ARN,
+      Message: message
+    }).promise();
+
+    logger.info('Verification link resent', { userId: existingUser.id });
+    return res.status(200).send({ message: "Verification link has been resent. Please check your email." });
   }
 
   try {
@@ -122,58 +156,7 @@ const createUser = async (req, res) => {
     return res.status(400).send();
   }
 };
-const resendVerificationLink = async (req, res) => {
-  const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).send({ message: "Email is required." });
-  }
-
-  try {
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      return res.status(404).send({ message: "User not found." });
-    }
-
-    if (user.is_verified) {
-      return res.status(400).send({ message: "User is already verified." });
-    }
-
-    const now = new Date();
-    const twoMinutesAgo = new Date(now - 2 * 60 * 1000);
-
-    if (user.last_verification_sent > twoMinutesAgo) {
-      return res.status(429).send({ message: "Please wait 2 minutes before requesting a new verification link." });
-    }
-
-    const verificationToken = crypto.randomBytes(20).toString('hex');
-    const tokenExpiration = new Date(now.getTime() + 2 * 60 * 1000);
-
-    user.verification_token = verificationToken;
-    user.verification_token_expires = tokenExpiration;
-    user.last_verification_sent = now;
-    await user.save();
-
-    // Publish message to SNS topic
-    const message = JSON.stringify({
-      userId: user.id,
-      email: user.email,
-      firstName: user.first_name,
-      verificationToken: verificationToken
-    });
-
-    await sns.publish({
-      TopicArn: process.env.SNS_TOPIC_ARN,
-      Message: message
-    }).promise();
-
-    return res.status(200).send({ message: "Verification link has been resent. Please check your email." });
-  } catch (error) {
-    logger.error('Error resending verification link', { error: error.message, stack: error.stack });
-    return res.status(400).send({ message: "An error occurred while resending the verification link." });
-  }
-};
 
 const authenticateUser = async (req, res, next) => {
   const start = Date.now();

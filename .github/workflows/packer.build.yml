@@ -83,12 +83,12 @@ jobs:
         run: |
           aws --version
 
-          # Get the latest Launch Template ID
-          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --query 'LaunchTemplates[?LaunchTemplateName==`csye6225_asg`].LaunchTemplateId' --output text)
+          # Get the Launch Template ID
+          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters "Name=launch-template-name,Values=csye6225_asg" --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
           echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 
-          # Get the latest AMI ID (assuming it's tagged appropriately)
-          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225_*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
+          # Get the latest AMI ID
+          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp-2024-11-19-02-44-15" --query 'Images[0].ImageId' --output text)
           echo "Latest AMI ID: $AMI_ID"
 
           # Create new Launch Template version
@@ -107,8 +107,8 @@ jobs:
       - name: Instance Refresh with latest AMI ID
         id: refreshing
         run: |
-          # Get the Auto Scaling Group name
-          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `csye6225-asg`)].AutoScalingGroupName' --output text)
+          # Auto Scaling Group name
+          ASG_NAME="csye6225-asg"
           echo "Auto Scaling Group Name: $ASG_NAME"
 
           # Start instance refresh

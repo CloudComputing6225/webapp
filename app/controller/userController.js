@@ -75,9 +75,43 @@ const createUser = async (req, res) => {
   sdc.timing('db.findUser.time', Date.now() - dbStart);
 
   if (existingUser) {
-    logger.warn('User creation failed: email already exists', { email });
-    sdc.timing('api.createUser.time', Date.now() - start);
-    return res.status(400).send();
+    // Handle resend verification logic
+    if (existingUser.is_verified) {
+      logger.warn('Resend verification attempt for verified user', { email });
+      return res.status(400).send({ message: "User is already verified." });
+    }
+
+    const now = new Date();
+    const twoMinutesAgo = new Date(now - 2 * 60 * 1000);
+
+    if (existingUser.last_verification_sent > twoMinutesAgo) {
+      logger.warn('Resend verification attempt too soon', { email });
+      return res.status(429).send({ message: "Please wait 2 minutes before requesting a new verification link." });
+    }
+
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const tokenExpiration = new Date(now.getTime() + 2 * 60 * 1000);
+
+    existingUser.verification_token = verificationToken;
+    existingUser.verification_token_expires = tokenExpiration;
+    existingUser.last_verification_sent = now;
+    await existingUser.save();
+
+    // Publish message to SNS topic
+    const message = JSON.stringify({
+      userId: existingUser.id,
+      email: existingUser.email,
+      firstName: existingUser.first_name,
+      verificationToken: verificationToken
+    });
+
+    await sns.publish({
+      TopicArn: process.env.SNS_TOPIC_ARN,
+      Message: message
+    }).promise();
+
+    logger.info('Verification link resent', { userId: existingUser.id });
+    return res.status(200).send({ message: "Verification link has been resent. Please check your email." });
   }
 
   try {
@@ -94,7 +128,8 @@ const createUser = async (req, res) => {
       account_updated: new Date(),
       is_verified: false,
       verification_token: verificationToken,
-      verification_token_expires: tokenExpiration
+      verification_token_expires: tokenExpiration,
+      last_verification_sent: new Date()
     });
     // Publish message to SNS topic
     const message = JSON.stringify({
@@ -121,6 +156,7 @@ const createUser = async (req, res) => {
     return res.status(400).send();
   }
 };
+
 
 const authenticateUser = async (req, res, next) => {
   const start = Date.now();
@@ -382,7 +418,7 @@ const deleteProfilePicture = async (req, res) => {
   } catch (error) {
     logger.error('Error deleting profile picture', { error: error.message, stack: error.stack });
     sdc.timing('api.deleteProfilePicture.time', Date.now() - start);
-    res.status(500).json({ message: 'Error deleting file' });
+    res.status(400).json({ message: 'Error deleting file' });
   }
 };
 

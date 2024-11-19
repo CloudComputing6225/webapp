@@ -49,6 +49,10 @@ const User = sequelize.define('User', {
     verification_token_expires: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    last_verification_sent: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {
     tableName: 'users',

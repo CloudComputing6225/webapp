@@ -94,7 +94,8 @@ const createUser = async (req, res) => {
       account_updated: new Date(),
       is_verified: false,
       verification_token: verificationToken,
-      verification_token_expires: tokenExpiration
+      verification_token_expires: tokenExpiration,
+      last_verification_sent: new Date()
     });
     // Publish message to SNS topic
     const message = JSON.stringify({
@@ -119,6 +120,58 @@ const createUser = async (req, res) => {
     logger.error('Error creating user', { error: error.message, stack: error.stack });
     sdc.timing('api.createUser.time', Date.now() - start);
     return res.status(400).send();
+  }
+};
+const resendVerificationLink = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).send({ message: "Email is required." });
+  }
+
+  try {
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).send({ message: "User not found." });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).send({ message: "User is already verified." });
+    }
+
+    const now = new Date();
+    const twoMinutesAgo = new Date(now - 2 * 60 * 1000);
+
+    if (user.last_verification_sent > twoMinutesAgo) {
+      return res.status(429).send({ message: "Please wait 2 minutes before requesting a new verification link." });
+    }
+
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const tokenExpiration = new Date(now.getTime() + 2 * 60 * 1000);
+
+    user.verification_token = verificationToken;
+    user.verification_token_expires = tokenExpiration;
+    user.last_verification_sent = now;
+    await user.save();
+
+    // Publish message to SNS topic
+    const message = JSON.stringify({
+      userId: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      verificationToken: verificationToken
+    });
+
+    await sns.publish({
+      TopicArn: process.env.SNS_TOPIC_ARN,
+      Message: message
+    }).promise();
+
+    return res.status(200).send({ message: "Verification link has been resent. Please check your email." });
+  } catch (error) {
+    logger.error('Error resending verification link', { error: error.message, stack: error.stack });
+    return res.status(400).send({ message: "An error occurred while resending the verification link." });
   }
 };
 
@@ -382,7 +435,7 @@ const deleteProfilePicture = async (req, res) => {
   } catch (error) {
     logger.error('Error deleting profile picture', { error: error.message, stack: error.stack });
     sdc.timing('api.deleteProfilePicture.time', Date.now() - start);
-    res.status(500).json({ message: 'Error deleting file' });
+    res.status(400).json({ message: 'Error deleting file' });
   }
 };
 

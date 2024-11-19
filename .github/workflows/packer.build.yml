@@ -88,7 +88,7 @@ jobs:
           echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 
           # Get the latest AMI ID
-          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp-2024-11-19-02-44-15" --query 'Images[0].ImageId' --output text)
+          AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=csye6225-webapp" --query 'Images[0].ImageId' --output text)
           echo "Latest AMI ID: $AMI_ID"
 
           # Create new Launch Template version

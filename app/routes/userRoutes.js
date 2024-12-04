@@ -25,6 +25,26 @@ router.route('/healthz')
     });
     return res.status(405).end(); // Method Not Allowed
   });
+router.route('/cicd')
+  .get(userController.healthCheck)
+  .head((req, res) => {
+    // Explicitly handle HEAD requests and return 405
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return res.status(405).end(); // Method Not Allowed
+  })
+  .all((req, res) => {
+    // Handle all other HTTP methods with 405 Method Not Allowed
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return res.status(405).end(); // Method Not Allowed
+  });
 
 // Create a new user
 router.post('/v2/user', userController.createUser);
